@@ -1,0 +1,11 @@
+// Скопируйте в Config/Local.xcconfig:
+//   cp Config/Local.xcconfig.example Config/Local.xcconfig
+//
+// Team ID: Xcode → Settings → Accounts → ваша команда (10 символов),
+// или developer.apple.com → Membership. Подойдёт и бесплатный Personal Team.
+// например: DEVELOPMENT_TEAM = ABCDE12345
+DEVELOPMENT_TEAM =
+
+// Уникальный префикс bundle id — у каждого разработчика свой,
+// иначе Xcode не сможет зарегистрировать приложение.
+BUNDLE_ID_PREFIX = com.yourname

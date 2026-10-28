@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode — проект генерируется XcodeGen из project.yml
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+*.xcresult
+
+# Личные настройки подписи (Team ID, bundle id)
+Config/Local.xcconfig
+
+# Swift Package Manager
+.swiftpm/
+.build/

@@ -1,0 +1,8 @@
+// Общие настройки сборки. Не меняйте здесь Team ID —
+// скопируйте Local.xcconfig.example в Local.xcconfig и впишите свои значения.
+
+BUNDLE_ID_PREFIX = com.example
+DEVELOPMENT_TEAM =
+
+// Личные настройки (не попадают в git). Знак «?» — файл необязателен.
+#include? "Local.xcconfig"
