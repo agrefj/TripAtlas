@@ -25,27 +25,44 @@ final class BoundaryStore {
         boundaries[zone.id]?.region ?? zone.region
     }
 
-    /// Подгружает границы для зон, которых ещё нет. Порядок зон — порядок загрузки.
+    /// Подгружает границы для зон, которых ещё нет. Порядок зон — порядок загрузки;
+    /// запросы идут по нескольку сразу, каждая граница появляется, как только пришла.
     func load(_ zones: [CityZone]) async {
         guard Self.isEnabled else { return }
-        let todo = zones.filter { !requested.contains($0.id) }
+        var todo: [CityBoundaryService.Lookup] = []
+        for zone in zones where requested.insert(zone.id).inserted {
+            todo.append(.init(key: zone.id, latitude: zone.latitude, longitude: zone.longitude))
+        }
         guard !todo.isEmpty else { return }
-        todo.forEach { requested.insert($0.id) }
         pending += todo.count
 
-        for zone in todo {
-            let result = await CityBoundaryService.shared.boundary(
-                key: zone.id, latitude: zone.latitude, longitude: zone.longitude)
-            pending -= 1
-            switch result {
-            case .found(let boundary):
-                boundaries[zone.id] = boundary
-                polygons[zone.id] = boundary.makeMKPolygons()
-            case .missing:
-                break
-            case .failed:
-                requested.remove(zone.id)   // повторим при следующем показе карты
+        // Держим в работе столько запросов, сколько пускает сервис, новые — по порядку списка.
+        // Тело группы — на главном потоке, как и весь BoundaryStore: здесь меняется состояние экранов.
+        await withTaskGroup(of: (String, CityBoundaryService.Result).self) { group in
+            var queue = todo.makeIterator()
+            for _ in 0..<CityBoundaryService.maxConcurrentRequests {
+                guard let lookup = queue.next() else { break }
+                group.addTask { await CityBoundaryService.fetch(lookup) }
             }
+            while let (id, result) = await group.next() {
+                apply(result, for: id)
+                if let lookup = queue.next() {
+                    group.addTask { await CityBoundaryService.fetch(lookup) }
+                }
+            }
+        }
+    }
+
+    private func apply(_ result: CityBoundaryService.Result, for id: String) {
+        pending -= 1
+        switch result {
+        case .found(let boundary):
+            boundaries[id] = boundary
+            polygons[id] = boundary.makeMKPolygons()
+        case .missing:
+            break
+        case .failed:
+            requested.remove(id)   // повторим при следующем показе карты
         }
     }
 
@@ -60,11 +77,9 @@ final class BoundaryStore {
     /// Заранее скачивает границы городов новой поездки (в фоне, сразу после её создания).
     nonisolated static func prefetch(_ places: [Place]) {
         guard isEnabled else { return }
+        let lookups = places.map { CityBoundaryService.Lookup(key: $0.id, latitude: $0.latitude, longitude: $0.longitude) }
         Task.detached(priority: .utility) {
-            for place in places {
-                _ = await CityBoundaryService.shared.boundary(
-                    key: place.id, latitude: place.latitude, longitude: place.longitude)
-            }
+            _ = await CityBoundaryService.boundaries(for: lookups)
         }
     }
 }

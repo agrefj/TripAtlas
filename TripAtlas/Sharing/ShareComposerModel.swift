@@ -102,11 +102,15 @@ final class ShareComposerModel {
             .sorted { ($0.assetIDs?.count ?? 0) > ($1.assetIDs?.count ?? 0) }
             .prefix(4).map(\.id))
 
+        // Все границы разом: запросы идут по нескольку.
+        let found = BoundaryStore.isEnabled
+            ? await CityBoundaryService.boundaries(for: subject.places.map {
+                CityBoundaryService.Lookup(key: $0.id, latitude: $0.latitude, longitude: $0.longitude)
+            })
+            : [:]
         for (index, place) in subject.places.enumerated() {
             var boundary: CityBoundary?
-            if BoundaryStore.isEnabled,
-               case .found(let b) = await CityBoundaryService.shared.boundary(
-                   key: place.id, latitude: place.latitude, longitude: place.longitude) {
+            if case .found(let b) = found[place.id] {
                 boundary = b
                 if silhouetteIDs.contains(place.id) {
                     let rings = SilhouetteBuilder.normalize(b)

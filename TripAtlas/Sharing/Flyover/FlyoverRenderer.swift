@@ -50,6 +50,7 @@ final class FlyoverRenderer {
         drawMarkers(time: time, view: view)
         drawGradients(ctx: ctx)
         drawBrandPill()
+        drawAttribution()
 
         drawIntro(time: time)
         for i in script.cities.indices {
@@ -244,6 +245,16 @@ final class FlyoverRenderer {
             UIGraphicsGetCurrentContext()?.restoreGState()
         }
         text(ShareConfig.brandName, font: font, at: CGPoint(x: pill.minX + 78, y: pill.minY + 16), maxWidth: width + 10, shadow: false)
+    }
+
+    /// Подпись данных OpenStreetMap (ODbL) в правом нижнем углу — если в ролике есть настоящие границы.
+    /// Ниже полароидов (последний кончается выше y ≈ 1850), поэтому ничего не перекрывает.
+    private func drawAttribution() {
+        guard script.cities.contains(where: { !$0.rings.isEmpty }) else { return }
+        let font = Fonts.system(26, .medium)
+        let label = MapSnapshotRenderer.attributionText
+        let width = ceil((label as NSString).size(withAttributes: [.font: font]).width)
+        text(label, font: font, alpha: 0.6, at: CGPoint(x: W - 44 - width, y: H - 64), maxWidth: width + 4)
     }
 
     // MARK: - Вступление

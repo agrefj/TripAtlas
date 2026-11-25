@@ -65,6 +65,13 @@ enum FlyoverPreparation {
             stops = stops.enumerated().filter { keep.contains($0.offset) }.map(\.element)
         }
 
+        // Все границы разом: запросы идут по нескольку.
+        let found = BoundaryStore.isEnabled
+            ? await CityBoundaryService.boundaries(for: stops.flatMap(\.places).map {
+                CityBoundaryService.Lookup(key: $0.id, latitude: $0.latitude, longitude: $0.longitude)
+            })
+            : [:]
+
         var result: [FlyoverCity] = []
         for (index, stop) in stops.enumerated() {
             var rings: [[CGPoint]] = []
@@ -78,9 +85,7 @@ enum FlyoverPreparation {
                 weightedY += Double(center.y) * w
                 weight += w
 
-                if BoundaryStore.isEnabled,
-                   case .found(let boundary) = await CityBoundaryService.shared.boundary(
-                       key: place.id, latitude: place.latitude, longitude: place.longitude) {
+                if case .found(let boundary) = found[place.id] {
                     for polygon in boundary.polygons {
                         rings.append(polygon.outer.map { Mercator.project($0) })
                         rings.append(contentsOf: polygon.holes.map { ring in ring.map { Mercator.project($0) } })

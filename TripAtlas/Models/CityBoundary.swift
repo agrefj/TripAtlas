@@ -139,7 +139,7 @@ enum GeoPolygon {
 
 // MARK: - Разбор ответа Nominatim
 
-/// Разбирает ответ `/reverse?...&polygon_geojson=1` сервиса Nominatim.
+/// Разбирает ответ `/reverse?...&polygon_geojson=1` сервиса Nominatim (наш сервер — тот же Nominatim).
 enum OSMBoundaryParser {
     /// Больше — это уже регион или область, а не город.
     static let maxAreaKm2 = 15_000.0

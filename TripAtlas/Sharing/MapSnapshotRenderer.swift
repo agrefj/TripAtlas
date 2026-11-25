@@ -29,7 +29,9 @@ enum MapSnapshotRenderer {
         options.preferredConfiguration = configuration
 
         guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
-        return await MainActor.run { draw(snapshot: snapshot, zones: zones, size: size, numbered: numbered, scale: scale) }
+        return await MainActor.run {
+            draw(snapshot: snapshot, zones: zones, size: size, numbered: numbered, dark: dark, scale: scale)
+        }
     }
 
     // MARK: - Регион
@@ -63,7 +65,7 @@ enum MapSnapshotRenderer {
 
     @MainActor
     private static func draw(snapshot: MKMapSnapshotter.Snapshot, zones: [Zone], size: CGSize, numbered: Bool,
-                             scale: CGFloat) -> UIImage {
+                             dark: Bool, scale: CGFloat) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
@@ -123,7 +125,30 @@ enum MapSnapshotRenderer {
                 let textSize = text.size(withAttributes: attributes)
                 text.draw(at: CGPoint(x: p.x - textSize.width / 2, y: p.y - textSize.height / 2), withAttributes: attributes)
             }
+
+            // Границы — данные OpenStreetMap (ODbL): на картинке с ними нужна подпись.
+            if zones.contains(where: { $0.boundary != nil }) {
+                drawAttribution(in: size, dark: dark)
+            }
         }
+    }
+
+    static let attributionText = "© OpenStreetMap contributors"
+
+    private static func drawAttribution(in size: CGSize, dark: Bool) {
+        let shadow = NSShadow()
+        shadow.shadowColor = (dark ? UIColor.black : UIColor.white).withAlphaComponent(0.8)
+        shadow.shadowBlurRadius = 2
+        shadow.shadowOffset = .zero
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 8, weight: .medium),
+            .foregroundColor: (dark ? UIColor.white : UIColor.black).withAlphaComponent(0.7),
+            .shadow: shadow,
+        ]
+        let text = attributionText as NSString
+        let textSize = text.size(withAttributes: attributes)
+        text.draw(at: CGPoint(x: size.width - textSize.width - 6, y: size.height - textSize.height - 4),
+                  withAttributes: attributes)
     }
 
     private static func append(_ ring: [Coordinate], to path: UIBezierPath, snapshot: MKMapSnapshotter.Snapshot) {

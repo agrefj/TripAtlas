@@ -18,6 +18,7 @@ final class SharingTests: XCTestCase {
         XCTAssertGreaterThan(points.map(\.y).min() ?? 0, 0.1)
     }
 
+    @MainActor
     func testSpreadPicksCoverFirstAndEvenlyDistributes() {
         let ids = (0..<100).map { "p\($0)" }
         let picked = ShareComposerModel.spread(ids, count: 5, first: "p42")
@@ -60,6 +61,7 @@ final class SharingTests: XCTestCase {
         XCTAssertFalse(year.timelineNumbered)
     }
 
+    @MainActor
     func testPickBestTakesTopScoredPhotoFromEachSegment() {
         let ids = (0..<10).map { "p\($0)" }
         let scores: [String: Double] = ["p1": 0.9, "p3": -0.5, "p4": 0.2, "p8": 0.7, "p9": 0.1]
